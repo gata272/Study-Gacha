@@ -77,7 +77,7 @@ struct GachaView: View {
                     Image(systemName: "sparkles")
                 }
                 .foregroundStyle(.white)
-                Text("勉強で貯めたコインで回そう。全\(Catalog.items.count)種類コンプリートを目指せ！")
+                Text("勉強で貯めたコインで回そう。全\(Catalog.items.count)種類のバッジコンプリートを目指せ！")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
             }
@@ -192,7 +192,7 @@ struct GachaView: View {
                         .frame(width: 44, alignment: .trailing)
                 }
             }
-            Text("ダブったアイテムはレアリティに応じてコインに還元されます（コモン5／レア15／SR40／UR120／レジェンド400）。")
+            Text("ウルトラレア以上は金色の「ゴールドバッジ」です。ダブったバッジはレアリティに応じてコインに還元されます（コモン5／レア15／SR40／UR120／レジェンド400）。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -321,26 +321,35 @@ struct GachaRevealView: View {
                         }
                     }
             }
-            VStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(result.item.rarity.color.opacity(0.22))
-                    Image(systemName: result.item.symbol)
-                        .font(.system(size: 96))
-                        .foregroundStyle(result.item.rarity.color)
+            VStack(spacing: 14) {
+                BadgeMedalView(item: result.item, size: 170)
+                    .shadow(color: result.item.rarity.color.opacity(0.7), radius: 24)
+                HStack(spacing: 6) {
+                    if result.item.isGold {
+                        Text("ゴールドバッジ")
+                            .font(.caption)
+                            .fontWeight(.black)
+                            .foregroundStyle(Color(red: 0.45, green: 0.28, blue: 0.0))
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 3)
+                            .background(AppTheme.coinGradient, in: Capsule())
+                    } else {
+                        Text("標準バッジ")
+                            .font(.caption)
+                            .fontWeight(.black)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 3)
+                            .background(Color(.systemGray), in: Capsule())
+                    }
+                    RarityTag(rarity: result.item.rarity)
                 }
-                .frame(width: 190, height: 190)
-                .shadow(color: result.item.rarity.color.opacity(0.8), radius: 24)
-                RarityTag(rarity: result.item.rarity)
                 Text(result.item.name)
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.black)
                     .foregroundStyle(.white)
-                Text(result.item.flavor)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 24)
                 badge(for: result)
             }
         }

@@ -21,7 +21,7 @@ struct ContentView: View {
                 .tabItem { Label("ガチャ", systemImage: "gift.fill") }
                 .tag(2)
             CollectionView()
-                .tabItem { Label("図鑑", systemImage: "square.grid.2x2.fill") }
+                .tabItem { Label("バッジ", systemImage: "medal.fill") }
                 .tag(3)
         }
         .environmentObject(store)

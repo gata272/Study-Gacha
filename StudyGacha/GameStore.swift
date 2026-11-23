@@ -8,7 +8,7 @@ final class GameStore: ObservableObject {
 
     // タイマー（セッション内のみ保持）
     @Published var timerRunning = false
-    @Published var timerSubject = "数学"
+    @Published var timerSubject = "数学ⅠA"
     private var timerStartDate: Date?
     private var timerBaseSeconds = 0
 
@@ -256,6 +256,14 @@ final class GameStore: ObservableObject {
 
     var ownedKinds: Int {
         state.collection.values.filter { $0 > 0 }.count
+    }
+
+    var ownedGoldKinds: Int {
+        Catalog.goldItems.filter { ownedCount(itemID: $0.id) > 0 }.count
+    }
+
+    var ownedStandardKinds: Int {
+        Catalog.standardItems.filter { ownedCount(itemID: $0.id) > 0 }.count
     }
 
     func ownedKinds(rarity: Rarity) -> Int {

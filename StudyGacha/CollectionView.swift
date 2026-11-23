@@ -2,14 +2,15 @@ import SwiftUI
 
 struct CollectionView: View {
     @EnvironmentObject private var store: GameStore
-    @State private var filter: Rarity? = nil   // nil = すべて
+    @State private var kindFilter: Int = 0   // 0=すべて 1=ゴールド 2=標準
+    @State private var rarityFilter: Rarity? = nil
     @State private var selected: GachaItem?
 
     private var shownItems: [GachaItem] {
-        if let filter {
-            return Catalog.items(rarity: filter)
+        Catalog.items.filter { item in
+            (kindFilter == 0 || (kindFilter == 1) == item.isGold) &&
+            (rarityFilter == nil || item.rarity == rarityFilter)
         }
-        return Catalog.items
     }
 
     var body: some View {
@@ -17,24 +18,31 @@ struct CollectionView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     progressCard
-                    filterRow
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        ForEach(shownItems) { item in
-                            let count = store.ownedCount(itemID: item.id)
-                            Button {
-                                if count > 0 { selected = item }
-                            } label: {
-                                ItemCardView(item: item, ownedCount: count, dimmed: count == 0)
+                    filterRows
+                    if shownItems.isEmpty {
+                        Text("この条件のバッジはありません。")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 24)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            ForEach(shownItems) { item in
+                                let count = store.ownedCount(itemID: item.id)
+                                Button {
+                                    if count > 0 { selected = item }
+                                } label: {
+                                    ItemCardView(item: item, ownedCount: count, dimmed: count == 0)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(count == 0)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(count == 0)
                         }
                     }
                 }
                 .padding()
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("図鑑")
+            .navigationTitle("バッジ図鑑")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selected) { item in
                 ItemDetailSheet(item: item, count: store.ownedCount(itemID: item.id))
@@ -43,15 +51,17 @@ struct CollectionView: View {
     }
 
     private var progressCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("コンプリート率")
-                    .font(.subheadline)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(store.ownedKinds)")
+                    .font(.system(size: 34, weight: .black))
+                Text("取得バッジ数（全\(Catalog.items.count)種類中）")
+                    .font(.caption)
                     .fontWeight(.bold)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(store.ownedKinds) / \(Catalog.items.count) 種類")
-                    .font(.headline)
+                Text(String(format: "%.1f%%", store.completionRate * 100))
+                    .font(.title3)
                     .fontWeight(.black)
             }
             GeometryReader { geo in
@@ -64,6 +74,23 @@ struct CollectionView: View {
                 }
             }
             .frame(height: 12)
+            HStack(spacing: 16) {
+                HStack(spacing: 5) {
+                    CoinIcon(size: 14)
+                    Text("ゴールドバッジ \(store.ownedGoldKinds)/\(Catalog.goldItems.count)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                HStack(spacing: 5) {
+                    Image(systemName: "medal.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Text("標準バッジ \(store.ownedStandardKinds)/\(Catalog.standardItems.count)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                Spacer()
+            }
             HStack {
                 ForEach(Rarity.allCases, id: \.rawValue) { rarity in
                     HStack(spacing: 4) {
@@ -84,36 +111,41 @@ struct CollectionView: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private var filterRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                filterChip(label: "すべて", rarity: nil)
-                ForEach(Rarity.allCases, id: \.rawValue) { rarity in
-                    filterChip(label: rarity.name, rarity: rarity)
-                }
+    private var filterRows: some View {
+        VStack(spacing: 8) {
+            Picker("バッジの種類", selection: $kindFilter) {
+                Text("すべて").tag(0)
+                Text("ゴールド").tag(1)
+                Text("標準").tag(2)
             }
-            .padding(.vertical, 2)
+            .pickerStyle(.segmented)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    chip(label: "全レアリティ", active: rarityFilter == nil) { rarityFilter = nil }
+                    ForEach(Rarity.allCases, id: \.rawValue) { rarity in
+                        chip(label: rarity.name, active: rarityFilter == rarity) { rarityFilter = rarity }
+                    }
+                }
+                .padding(.vertical, 1)
+            }
         }
     }
 
-    private func filterChip(label: String, rarity: Rarity?) -> some View {
-        let isActive = filter == rarity
-        return Button {
-            filter = rarity
-        } label: {
+    private func chip(label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             Text(label)
                 .font(.subheadline)
                 .fontWeight(.bold)
                 .padding(.horizontal, 13)
                 .padding(.vertical, 7)
-                .background(isActive ? (rarity?.color ?? Color(red: 0.55, green: 0.30, blue: 0.95)) : Color(.systemGray5), in: Capsule())
-                .foregroundStyle(isActive ? .white : .primary)
+                .background(active ? Color(red: 0.55, green: 0.30, blue: 0.95) : Color(.systemGray5), in: Capsule())
+                .foregroundStyle(active ? .white : .primary)
         }
         .buttonStyle(.plain)
     }
 }
 
-/// アイテム詳細シート
+/// バッジ詳細シート
 struct ItemDetailSheet: View {
     var item: GachaItem
     var count: Int
@@ -122,29 +154,36 @@ struct ItemDetailSheet: View {
     var body: some View {
         VStack(spacing: 16) {
             Spacer()
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(item.rarity.color.opacity(0.20))
-                Image(systemName: item.symbol)
-                    .font(.system(size: 84))
-                    .foregroundStyle(item.rarity.color)
+            BadgeMedalView(item: item, size: 150)
+                .shadow(color: item.rarity.color.opacity(0.5), radius: 16)
+            HStack(spacing: 6) {
+                if item.isGold {
+                    Text("ゴールドバッジ")
+                        .font(.caption)
+                        .fontWeight(.black)
+                        .foregroundStyle(Color(red: 0.45, green: 0.28, blue: 0.0))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(AppTheme.coinGradient, in: Capsule())
+                } else {
+                    Text("標準バッジ")
+                        .font(.caption)
+                        .fontWeight(.black)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(Color(.systemGray), in: Capsule())
+                }
+                RarityTag(rarity: item.rarity)
             }
-            .frame(width: 170, height: 170)
-            .shadow(color: item.rarity.color.opacity(0.5), radius: 16)
-
-            RarityTag(rarity: item.rarity)
             Text(item.name)
-                .font(.title)
+                .font(.title2)
                 .fontWeight(.black)
-            Text(item.flavor)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
             Label("所持数 ×\(count)", systemImage: "square.stack.3d.up.fill")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-
             Button {
                 dismiss()
             } label: {

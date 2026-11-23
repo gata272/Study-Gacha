@@ -90,46 +90,77 @@ struct RarityTag: View {
     }
 }
 
-/// アイテムのカード（図鑑グリッドとガチャ結果で共用）
+/// バッジのメダル表示（ゴールドバッジは金色、標準バッジは銀色のメダル）
+struct BadgeMedalView: View {
+    var item: GachaItem
+    var size: CGFloat = 64
+    var dimmed: Bool = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    dimmed
+                        ? LinearGradient(colors: [Color(.systemGray4), Color(.systemGray5)], startPoint: .top, endPoint: .bottom)
+                        : item.isGold
+                            ? AppTheme.coinGradient
+                            : LinearGradient(colors: [Color(red: 0.92, green: 0.93, blue: 0.96), Color(red: 0.78, green: 0.80, blue: 0.86)], startPoint: .top, endPoint: .bottom)
+                )
+                .overlay(
+                    Circle().stroke(
+                        dimmed ? Color(.systemGray3) : item.isGold ? Color.orange.opacity(0.7) : item.rarity.color.opacity(0.65),
+                        lineWidth: max(2, size * 0.045))
+                )
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
+            if dimmed {
+                Text("？")
+                    .font(.system(size: size * 0.42, weight: .black))
+                    .foregroundStyle(Color(.systemGray2))
+            } else {
+                Text(item.emoji)
+                    .font(.system(size: size * 0.52))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// バッジのカード表示（図鑑グリッドとガチャ結果で共用）
 struct ItemCardView: View {
     var item: GachaItem
     var ownedCount: Int? = nil     // nilなら所持数を出さない
     var dimmed: Bool = false       // 未所持表示
 
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(item.rarity.color.opacity(dimmed ? 0.10 : 0.18))
-                Image(systemName: dimmed ? "questionmark" : item.symbol)
-                    .font(.system(size: 30))
-                    .foregroundStyle(dimmed ? Color.secondary : item.rarity.color)
-            }
-            .frame(height: 64)
-            .overlay(alignment: .topLeading) {
-                RarityTag(rarity: item.rarity)
-                    .padding(5)
-                    .opacity(dimmed ? 0.35 : 1)
-            }
-            .overlay(alignment: .topTrailing) {
-                if let count = ownedCount, count > 1 {
-                    Text("×\(count)")
-                        .font(.caption2)
-                        .fontWeight(.black)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(.systemBackground), in: Capsule())
-                        .padding(5)
+        VStack(spacing: 5) {
+            BadgeMedalView(item: item, size: 56, dimmed: dimmed)
+                .overlay(alignment: .topTrailing) {
+                    if let count = ownedCount, count > 1 {
+                        Text("×\(count)")
+                            .font(.caption2)
+                            .fontWeight(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(.systemBackground), in: Capsule())
+                            .offset(x: 10, y: -4)
+                    }
                 }
-            }
-
             Text(dimmed ? "？？？" : item.name)
-                .font(.caption)
+                .font(.caption2)
                 .fontWeight(.bold)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(dimmed ? .secondary : .primary)
+            RarityTag(rarity: item.rarity)
+                .opacity(dimmed ? 0.35 : 1)
         }
-        .padding(8)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(item.isGold && !dimmed ? Color.orange.opacity(0.6) : Color.clear, lineWidth: 1.2)
+        )
     }
 }

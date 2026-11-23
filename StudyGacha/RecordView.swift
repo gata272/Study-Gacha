@@ -4,7 +4,7 @@ struct RecordView: View {
     @EnvironmentObject private var store: GameStore
     @State private var mode: Int = 0   // 0=タイマー 1=手入力
     @State private var manualMinutes: Int = 30
-    @State private var manualSubject: String = "数学"
+    @State private var manualSubject: String = "数学ⅠA"
     @State private var manualDate: Date = Date()
     @State private var earn: EarnResult?
 
